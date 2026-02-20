@@ -1,8 +1,8 @@
-# Circuits-systems
+# 3C10 - Circuits & Systems - Group 2
 
-Circuits and Systems module
-Code for the module
+## Repository Structure
 
+```bash
 CIRCUITS-SYSTEMS/
 │
 ├── README.md
@@ -37,3 +37,4 @@ CIRCUITS-SYSTEMS/
 ├── schematics/
 │   ├── wiring_diagrams/
 │   └── datasheets/
+```
