@@ -21,7 +21,7 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &SPI, OLED_DC, OLED_RESET,
 #define MAX_DISTANCE 40
 
 #define JOY_PIN A0
-#define JOY_THRESHOLD 100
+#define JOY_THRESHOLD 50
 #define TOUCH_PIN 4
 
 // ---------------- Servo ----------------
@@ -29,15 +29,15 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &SPI, OLED_DC, OLED_RESET,
 Servo radarServo;
 
 // ---------------- Sweep Settings ----------------
-const int STEP = 1;     // 1 increment for joystick calibration
+const int STEP = 1;
 const int MIN_ANGLE = 0;
 const int MAX_ANGLE = 180;
 const int SWEEP_RADIUS = 56;
 
 // ---------------- Calibration Defaults ----------------
-long thresholdDistance = 20;
-int rotationSetting = 180;
-const unsigned long CALIBRATION_TIMEOUT = 30000; // 30 seconds
+long thresholdDistance = 20; // cm
+int rotationSetting = 180;   // degrees
+const unsigned long CALIBRATION_TIMEOUT = 30000; // 30 sec
 
 // ---------------- Helper Functions -------------------
 long readDistanceCM() {
@@ -67,7 +67,6 @@ void showMessage(String line1, String line2, long value, String unit) {
   display.setCursor(0,0);
   display.println(line1);
   display.println(line2);
-  display.setTextSize(1);
   display.setCursor(0,40);
   display.print(value);
   display.print(" ");
@@ -77,85 +76,76 @@ void showMessage(String line1, String line2, long value, String unit) {
 
 // ---------------- Calibration -------------------
 void runCalibration() {
-  unsigned long startTime = millis();
-
-  bool distanceSet = false;
-  bool rotationSet = false;
-
-  // Temporary variables for live adjustment
   long tempDistance = thresholdDistance;
   int tempRotation = rotationSetting;
 
-  while(millis() - startTime < CALIBRATION_TIMEOUT && (!distanceSet || !rotationSet)) {
+  // --- Distance Calibration ---
+  unsigned long startTime = millis();
+  while(millis() - startTime < CALIBRATION_TIMEOUT) {
     int offset = readJoystickOffset();
+    if(offset > JOY_THRESHOLD && tempDistance < 50) tempDistance += STEP;
+    if(offset < -JOY_THRESHOLD && tempDistance > 1) tempDistance -= STEP;
+    showMessage("Set MAX DISTANCE", "Press touch to confirm", tempDistance, "cm");
 
-    // Adjust distance
-    if(!distanceSet) {
-      if(offset > JOY_THRESHOLD && tempDistance < 50) tempDistance += STEP;
-      if(offset < -JOY_THRESHOLD && tempDistance > 1) tempDistance -= STEP;
-      showMessage("Set MAX DISTANCE", "Press touch to confirm", tempDistance, "cm");
-
-      if(isTouchPressed()) {
-        distanceSet = true;
-        thresholdDistance = tempDistance;
-        delay(300); // debounce
-      }
+    if(isTouchPressed()) {
+      thresholdDistance = tempDistance;
+      delay(300);
+      break;
     }
-
-    // Adjust rotation
-    if(distanceSet && !rotationSet) {
-      if(offset > JOY_THRESHOLD && tempRotation < MAX_ANGLE) tempRotation += STEP;
-      if(offset < -JOY_THRESHOLD && tempRotation > MIN_ANGLE) tempRotation -= STEP;
-      showMessage("Set MAX ROTATION", "Press touch to confirm", tempRotation, "deg");
-
-      if(isTouchPressed()) {
-        rotationSet = true;
-        rotationSetting = tempRotation;
-        delay(300); // debounce
-      }
-    }
-
     delay(50);
   }
 
-  // Apply defaults if not set in time
-  if(!distanceSet) thresholdDistance = 20;
-  if(!rotationSet) rotationSetting = 180;
+  // --- Rotation Calibration ---
+  startTime = millis();
+  while(millis() - startTime < CALIBRATION_TIMEOUT) {
+    int offset = readJoystickOffset();
+    if(offset > JOY_THRESHOLD && tempRotation < MAX_ANGLE) tempRotation += STEP;
+    if(offset < -JOY_THRESHOLD && tempRotation > MIN_ANGLE) tempRotation -= STEP;
+    showMessage("Set MAX ROTATION", "Press touch to confirm", tempRotation, "deg");
+
+    if(isTouchPressed()) {
+      rotationSetting = tempRotation;
+      delay(300);
+      break;
+    }
+    delay(50);
+  }
 }
 
 // ---------------- Radar Display -------------------
 void drawRadar(int currentAngle, int currentDistance) {
   display.clearDisplay();
-  int centerX = SCREEN_WIDTH/2;
-  int centerY = SCREEN_HEIGHT-1;
+  int centerX = SCREEN_WIDTH / 2;
+  int centerY = SCREEN_HEIGHT - 1;
 
   // Radar circles
-  for(int r=16; r<=SWEEP_RADIUS; r+=10) display.drawCircle(centerX, centerY, r, WHITE);
+  for(int r = 16; r <= SWEEP_RADIUS; r += 10)
+    display.drawCircle(centerX, centerY, r, WHITE);
 
   // Reference lines
   display.drawLine(0, centerY, SCREEN_WIDTH, centerY, WHITE);
-  for(int a=30;a<=150;a+=30){
-    float rad = a*3.14159/180;
+  for(int a = 30; a <= 150; a += 30) {
+    float rad = a * 3.14159 / 180;
     display.drawLine(centerX, centerY,
-                     centerX - SWEEP_RADIUS*cos(rad),
-                     centerY - SWEEP_RADIUS*sin(rad),
+                     centerX - SWEEP_RADIUS * cos(rad),
+                     centerY - SWEEP_RADIUS * sin(rad),
                      WHITE);
   }
 
   // Sweep line and object
-  float rad = currentAngle*3.14159/180;
+  float rad = currentAngle * 3.14159 / 180;
   int lineLength = SWEEP_RADIUS;
-  if(currentDistance>0){
-    lineLength = map(currentDistance,0,thresholdDistance,0,SWEEP_RADIUS);
-    if(lineLength>SWEEP_RADIUS) lineLength = SWEEP_RADIUS;
+  if(currentDistance > 0){
+    lineLength = map(currentDistance, 0, thresholdDistance, 0, SWEEP_RADIUS);
+    if(lineLength > SWEEP_RADIUS) lineLength = SWEEP_RADIUS;
   }
   display.drawLine(centerX, centerY,
-                   centerX - lineLength*cos(rad),
-                   centerY - lineLength*sin(rad),
+                   centerX - lineLength * cos(rad),
+                   centerY - lineLength * sin(rad),
                    WHITE);
-  if(currentDistance>0 && currentDistance<=thresholdDistance){
-    display.fillCircle(centerX - lineLength*cos(rad),
-                       centerY - lineLength*sin(rad),
+  if(currentDistance > 0 && currentDistance <= thresholdDistance){
+    display.fillCircle(centerX - lineLength * cos(rad),
+                       centerY - lineLength * sin(rad),
                        2, WHITE);
   }
 
@@ -181,27 +171,30 @@ void setup() {
   display.clearDisplay();
   display.setTextColor(WHITE);
 
-  // Run the 30-second two-step calibration BEFORE servo init
-  runCalibration();
-
+  runCalibration(); // run 2-step calibration before servo
   radarServo.attach(SERVO_PIN);
 }
 
 // ---------------- Main Loop -------------------
 void loop() {
-  // Sweep 0 -> rotationSetting
-  for(int angle=0; angle<=rotationSetting; angle+=3){
-    radarServo.write(angle);
-    delay(50);
-    int distance = readDistanceCM();
-    drawRadar(angle,distance);
+  static int angle = 0;           // current servo angle
+  static int step = 3;            // sweep increment
+  int distance = readDistanceCM();
+
+  // Read joystick offset
+  int offset = readJoystickOffset();
+
+  // If joystick is moved significantly, use it to control servo
+  if (abs(offset) > JOY_THRESHOLD) {
+    if (offset > 0 && angle < rotationSetting) angle++;
+    if (offset < 0 && angle > 0) angle--;
+  } else {
+    // Otherwise, perform automatic sweep
+    angle += step;
+    if (angle >= rotationSetting || angle <= 0) step = -step; // reverse sweep
   }
 
-  // Sweep rotationSetting -> 0
-  for(int angle=rotationSetting; angle>=0; angle-=3){
-    radarServo.write(angle);
-    delay(50);
-    int distance = readDistanceCM();
-    drawRadar(angle,distance);
-  }
+  radarServo.write(angle);
+  drawRadar(angle, distance);
+  delay(50);
 }
