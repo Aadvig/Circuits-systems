@@ -21,15 +21,15 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &SPI, OLED_DC, OLED_RESET,
 #define MAX_DISTANCE 40
 
 #define JOY_PIN A0
-#define JOY_THRESHOLD 50
-#define TOUCH_PIN 4
+#define JOY_THRESHOLD 5
+#define TOUCH_PIN 5
 
 // ---------------- Servo ----------------
 #define SERVO_PIN 3
 Servo radarServo;
 
 // ---------------- Sweep Settings ----------------
-const int STEP = 1;
+const int STEP = 2;
 const int MIN_ANGLE = 0;
 const int MAX_ANGLE = 180;
 const int SWEEP_RADIUS = 56;
@@ -178,7 +178,7 @@ void setup() {
 // ---------------- Main Loop -------------------
 void loop() {
   static int angle = 0;           // current servo angle
-  static int step = 3;            // sweep increment
+  static int step = 2;            // sweep increment
   int distance = readDistanceCM();
 
   // Read joystick offset
@@ -196,5 +196,5 @@ void loop() {
 
   radarServo.write(angle);
   drawRadar(angle, distance);
-  delay(50);
+  delay(25);
 }
