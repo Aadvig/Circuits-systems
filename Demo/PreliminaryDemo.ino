@@ -39,7 +39,7 @@ const int SWEEP_RADIUS = 56;
 
 
 // ---------------- Radar Settings ----------------
-#define TRAIL_LENGTH 10
+#define TRAIL_LENGTH 15
 
 int angleTrail[TRAIL_LENGTH];
 int distTrail[TRAIL_LENGTH];
@@ -94,6 +94,10 @@ void detectionBeep() {
   tone(SPEAKER_PIN, 1200);
 }
 
+void HapticSound() {
+  tone(SPEAKER_PIN, 900, 80);   // 900 Hz for 40 ms
+}
+
 // ---------------- Display -------------------
 void showMessage(String line1, String line2, long value, String unit) {
 
@@ -130,7 +134,7 @@ void runCalibration() {
     showMessage("Set MAX DISTANCE", "Press touch to confirm", tempDistance, "cm");
 
     if(isTouchPressed()) {
-
+      HapticSound();
       thresholdDistance = tempDistance;
       delay(300);
       break;
@@ -151,7 +155,7 @@ void runCalibration() {
     showMessage("Set MAX ROTATION", "Press touch to confirm", tempRotation, "deg");
 
     if(isTouchPressed()) {
-
+      HapticSound();
       rotationSetting = tempRotation;
       delay(300);
       break;
@@ -281,7 +285,6 @@ void loop() {
     if (offset > 0 && angle < rotationSetting) angle++;
     if (offset < 0 && angle > 0) angle--;
   }
-
   else {
 
     angle += step;
@@ -292,18 +295,22 @@ void loop() {
 
   radarServo.write(angle);
 
-  sonarSweepSound(angle);
-
+  // --- Detection logic ---
   if(distance > 0 && distance <= thresholdDistance) {
 
     if(millis() - lastBeep > 400) {
 
-      detectionBeep();
+      detectionBeep();     // alarm sound only
       lastBeep = millis();
     }
+
+  }
+  else {
+
+    sonarSweepSound(angle);   // only play sweep when nothing detected
   }
 
   drawRadar(angle, distance);
 
-  delay(25);
+  delay(20);
 }
