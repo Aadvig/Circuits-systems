@@ -1,0 +1,60 @@
+#include <Arduino.h>
+#include <Servo.h>
+
+#define H_SERVO_PIN 5
+#define V_SERVO_PIN 3
+
+Servo hServo;
+Servo vServo;
+
+// horizontal sweep limits
+int hMin = 0;
+int hMax = 180;
+
+// vertical sweep limits
+int vMin = 20;
+int vMax = 100;
+
+int hAngle = 0;
+int vAngle = 40;
+
+int hStep = 1;
+int vStep = 10;
+
+void setup() {
+
+  hServo.attach(H_SERVO_PIN);
+  vServo.attach(V_SERVO_PIN);
+
+  hServo.write(hAngle);
+  vServo.write(vAngle);
+
+  delay(1000);
+}
+
+void loop() {
+
+  // move horizontally
+  hAngle += hStep;
+
+  // reached edge of sweep
+  if (hAngle >= hMax || hAngle <= hMin) {
+
+    // reverse horizontal direction
+    hStep = -hStep;
+
+    // move vertical servo up one slice
+    vAngle += vStep;
+
+    if (vAngle > vMax)
+      vAngle = vMin;
+
+    vServo.write(vAngle);
+
+    delay(500); // pause so the vertical movement is visible
+  }
+
+  hServo.write(hAngle);
+
+  delay(50);
+}
