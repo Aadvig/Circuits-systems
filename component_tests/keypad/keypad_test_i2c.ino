@@ -1,33 +1,31 @@
+#include <Wire.h>
+#include <Adafruit_PCF8574.h>
 
-
+Adafruit_PCF8574 pcf1;
 
   bool pressedKeys[12] = {0,0,0,0,0,0,0,0,0,0,0,0};
   bool keyStates[12] = {0,0,0,0,0,0,0,0,0,0,0,0};
-  char keys[12] = {'*','7','4','1','0','8','5','2','#','9','6','3'} ;
+  char keys[12] = {'a','b','*','d','7','f','1','0','i','j','k','l'} ;
   char code[4] = {'1','2','3','4'};
   char input[4];
   int counter = 0;
 void setup() {
 
-  pinMode(3,INPUT_PULLUP);
-  pinMode(4,INPUT_PULLUP);
-  pinMode(5,INPUT_PULLUP);
-  pinMode(6,INPUT_PULLUP);
-  pinMode(7,INPUT_PULLUP);
-  pinMode(8,INPUT_PULLUP);
-  pinMode(9,INPUT_PULLUP);
-  pinMode(10,INPUT_PULLUP);
-  pinMode(11,INPUT_PULLUP);
-  pinMode(12,INPUT_PULLUP);
-  pinMode(13,INPUT_PULLUP);
-  pinMode(14,INPUT_PULLUP);
-  pinMode(15,OUTPUT);
-  pinMode(21,INPUT);
-
-  
-
-
   Serial.begin(9600);
+
+  Wire.begin();
+
+  if (!pcf1.begin(0x27, &Wire)) {
+    Serial.println("PCF8574 not found!");
+    while (1);
+  }
+
+  // Write HIGH to all pins so they act as inputs
+  for (int i = 0; i < 8; i++) {
+    pcf1.digitalWrite(i, HIGH);
+  }
+
+  Serial.println("Ready");
 }
 
 bool keyPressed(int pin){
@@ -43,16 +41,18 @@ void checkKeys(){
 void loop() {
 
 
-  for(int i = 0; i < 12; i++){
+  for(int i = 0; i < 8; i++){
+
+    if(i == 5) continue;
 
 
-    if(digitalRead(i+3) < keyStates[i]){  // If key is pressed and keyState is = not pressed
+    if(pcf1.digitalRead(i) < keyStates[i]){  // If key is pressed and keyState is = not pressed
       Serial.println(keys[i]);
       input[counter] = keys[i];
       counter++;
       delay(200);
     }
-    keyStates[i] = digitalRead(i+3);
+    keyStates[i] = pcf1.digitalRead(i);
   }
 
   if(counter == 4) {
