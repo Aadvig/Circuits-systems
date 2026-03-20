@@ -20,8 +20,8 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &SPI, OLED_DC, OLED_RESET,
 #define POT_PIN A2   // potentiometer
 
 // ---------------- Servos ----------------
-#define H_SERVO_PIN 3
-#define V_SERVO_PIN 5
+#define H_SERVO_PIN 5
+#define V_SERVO_PIN 3
 
 Servo hServo;
 Servo vServo;
@@ -45,19 +45,19 @@ int vStep = 10;
 unsigned long lastBeep = 0;
 
 // ---------- Speed Control ----------
-int speedDelay = 50; // default
+int speedDelay = 20; // default
 
 int readSpeedDelay() {
-  static int lastValue = 50;
+  static int lastValue = 20;
 
   int potValue = analogRead(POT_PIN);
-  int delayTime = map(potValue, 0, 1023, 7, 70);
+  int delayTime = map(potValue, 0, 1023, 10, 100);
 
   // smoothing
   delayTime = (delayTime + lastValue) / 2;
   lastValue = delayTime;
 
-  return constrain(delayTime, 7, 70);
+  return constrain(delayTime, 10, 100);
 }
 
 // ---------- Helper Functions ----------
