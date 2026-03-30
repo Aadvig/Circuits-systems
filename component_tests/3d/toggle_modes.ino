@@ -24,15 +24,15 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &SPI, OLED_DC, OLED_RESET,
 #define POT_PIN A2
 
 // ---------------- Servos ----------------
-#define H_SERVO_PIN 5
-#define V_SERVO_PIN 3
+#define H_SERVO_PIN 3
+#define V_SERVO_PIN 5
 
 Servo hServo;
 Servo vServo;
 
 // ---------------- Ultrasonic ----------------
-#define TRIG_PIN 6
-#define ECHO_PIN 7
+#define TRIG_PIN 7
+#define ECHO_PIN 6
 #define SPEAKER_PIN 2
 
 #define MAX_DISTANCE 40
@@ -287,8 +287,8 @@ lastTouchState = currentTouchState;
     if (x > 512 + THRESHOLD && hAngle < 180) hAngle++;
     else if (x < 512 - THRESHOLD && hAngle > 0) hAngle--;
 
-    if (y > 512 + THRESHOLD && vAngle < 180) vAngle++;
-    else if (y < 512 - THRESHOLD && vAngle > 0) vAngle--;
+    if (y > 512 + THRESHOLD && vAngle < 180) vAngle--;
+    else if (y < 512 - THRESHOLD && vAngle > 180) vAngle++;
 
     hServo.write(hAngle);
     vServo.write(vAngle);
