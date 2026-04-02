@@ -17,7 +17,7 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &SPI, OLED_DC, OLED_RESET,
 #define JOY_PIN A0
 #define JOY_X A0
 #define JOY_Y A1
-#define JOY_THRESHOLD 5
+#define JOY_THRESHOLD 10
 #define THRESHOLD 50
 
 #define TOUCH_PIN 4
@@ -39,8 +39,8 @@ Servo vServo;
 
 // ---------------- Calibration / Sweep ----------------
 int hMin = 0, hMax = 180;
-int vMin = 20, vMax = 100;
-int thresholdDistance = 30;
+int vMin = 0, vMax = 130;
+int thresholdDistance = 20;
 
 int hAngle, vAngle;
 int hStep = 1;
@@ -60,21 +60,36 @@ int readSpeedDelay() {
   static int lastValue = 20;
 
   int potValue = analogRead(POT_PIN);
-  int delayTime = map(potValue, 0, 1023, 10, 100);
 
+  // Reverse mapping so clockwise = faster sweep
+  int delayTime = map(potValue, 0, 1023, 100, 10);
+
+  // simple smoothing
   delayTime = (delayTime + lastValue) / 2;
   lastValue = delayTime;
 
   return constrain(delayTime, 10, 100);
 }
 
+int getSweepDelay() {
+  return 110 - readSpeedDelay();
+}
+
 // ---------- Helper Functions ----------
 int adjustValue(int value, int minVal, int maxVal) {
 
-  int offset = analogRead(JOY_PIN) - 512;
+  int joyY = analogRead(JOY_Y);     // read vertical axis
+  int offset = joyY - 512;          // center around 0
 
-  if (offset > JOY_THRESHOLD && value < maxVal) value++;
-  if (offset < -JOY_THRESHOLD && value > minVal) value--;
+  // dead zone
+  if (abs(offset) < JOY_THRESHOLD) return value;
+
+  // move value
+  if (offset > 0) value--;
+  else value++;
+
+  // clamp within limits
+  value = constrain(value, minVal, maxVal);
 
   return value;
 }
@@ -109,22 +124,28 @@ void calibrateStep(const char* label, int &value, int minVal, int maxVal) {
     delay(50);
   }
 }
-
 void calibrateSpeed() {
+
+  int lastShown = -1;
 
   while (true) {
 
     int current = readSpeedDelay();
 
-    display.clearDisplay();
-    display.setCursor(0,0);
-    display.println(F("Set Sweep Speed"));
-    display.println(F("Turn knob"));
-    display.println(F("Press to confirm"));
-    display.setCursor(0,40);
-    display.print(F("Delay: "));
-    display.println(current);
-    display.display();
+    if (current != lastShown) {
+
+      display.clearDisplay();
+      display.setCursor(0,0);
+      display.println(F("Set Sweep Speed"));
+      display.println(F("Turn knob"));
+      display.println(F("Press to confirm"));
+      display.setCursor(0,40);
+      display.print(F("Delay: "));
+      display.println(current);
+      display.display();
+
+      lastShown = current;
+    }
 
     if (digitalRead(TOUCH_PIN) == HIGH) {
       hapticFeedback();
@@ -281,29 +302,35 @@ lastTouchState = currentTouchState;
   // ================= MANUAL MODE =================
   if(manualMode) {
 
-    int x = analogRead(JOY_X);
-    int y = analogRead(JOY_Y);
+  int x = analogRead(JOY_X);
+  int y = analogRead(JOY_Y);
 
-    if (x > 512 + THRESHOLD && hAngle < 180) hAngle++;
-    else if (x < 512 - THRESHOLD && hAngle > 0) hAngle--;
+  // Horizontal movement
+  if (x > 512 + THRESHOLD && hAngle < hMax) hAngle++;
+  else if (x < 512 - THRESHOLD && hAngle > hMin) hAngle--;
 
-    if (y > 512 + THRESHOLD && vAngle < 180) vAngle--;
-    else if (y < 512 - THRESHOLD && vAngle > 180) vAngle++;
+  // Vertical movement (inverted joystick)
+  if (y > 512 + THRESHOLD && vAngle > vMin) vAngle--;
+  else if (y < 512 - THRESHOLD && vAngle < vMax) vAngle++;
 
-    hServo.write(hAngle);
-    vServo.write(vAngle);
+  // Hard safety clamp
+  hAngle = constrain(hAngle, hMin, hMax);
+  vAngle = constrain(vAngle, vMin, vMax);
 
-    if(millis() - lastDisplayUpdate > 120) {
+  hServo.write(hAngle);
+  vServo.write(vAngle);
 
-      long distance = readDistanceCM();
-      drawManualHUD(distance);
+  if(millis() - lastDisplayUpdate > 120) {
 
-      lastDisplayUpdate = millis();
-    }
+    long distance = readDistanceCM();
+    drawManualHUD(distance);
 
-    delay(20);
-    return;
+    lastDisplayUpdate = millis();
   }
+
+  delay(getSweepDelay());
+  return;
+}
 
   // ================= SWEEP MODE =================
   long distance = readDistanceCM();
@@ -339,5 +366,5 @@ lastTouchState = currentTouchState;
   hServo.write(hAngle);
   vServo.write(vAngle);
 
-  delay(readSpeedDelay());
+  delay(getSweepDelay());
 }
