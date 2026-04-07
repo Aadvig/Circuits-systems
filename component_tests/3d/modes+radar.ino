@@ -54,7 +54,7 @@ unsigned long lastDisplayUpdate = 0;
 
 // ---------- Mode 1 Radar Trail ----------
 #define SWEEP_RADIUS 56
-#define TRAIL_LENGTH 10
+#define TRAIL_LENGTH 5
 
 int angleTrail[TRAIL_LENGTH];
 int distTrail[TRAIL_LENGTH];
