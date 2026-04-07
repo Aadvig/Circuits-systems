@@ -39,7 +39,7 @@ Servo vServo;
 
 // ---------------- Calibration / Sweep ----------------
 int hMin = 0, hMax = 180;
-int vMin = 0, vMax = 130;
+int vMin = 0, vMax = 90;
 int thresholdDistance = 20;
 
 uint8_t hAngle, vAngle;
@@ -81,10 +81,10 @@ void pushDistanceSample(int d) {
 void drawMode2Graph(long currentDistance) {
   display.clearDisplay();
 
-  const int graphX = 10;
-  const int graphY = 0;
+  const int graphX = 0;
+  const int graphY = 10;
   const int graphW = SCREEN_WIDTH;
-  const int graphH = 54;   // leave room for text at bottom
+  const int graphH = 44;   // leave room for text at bottom
 
   const int xAxisY = graphY + graphH - 1;
   const int yAxisX = graphX;
@@ -144,6 +144,9 @@ void drawMode3Plane(int hAngle, int vAngle, int distance) {
       display.drawLine(xx, max(0, y - half), xx, min(SCREEN_HEIGHT - 1, y + half), WHITE);
     }
   }
+
+  display.setCursor(0,0);
+  display.print("Volumetric");
 }
 
 // ---------- Speed Control ----------
