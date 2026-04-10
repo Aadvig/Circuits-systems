@@ -391,6 +391,8 @@ void calibrateSpeed() {
   }
 }
 
+
+
 // ============================================================
 // SENSOR READING
 // ============================================================
@@ -685,9 +687,10 @@ void setup() {
   calibrateStep("V Min", vMin, 0, vMax - 1);
   calibrateStep("V Max", vMax, vMin + 1, 180);
   calibrateStep("Max Distance", thresholdDistance, 1, 50);
-  alarm_range = thresholdDistance; // sets the default value of alarm_range to threshold distance that was just set
+  alarm_range = floor(thresholdDistance/4); // sets the default value of alarm_range to 0.25*threshold distance that was just set
   calibrateStep("Arm Alarm", alarm_armed, 0, 1);
   if (alarm_armed) {
+
 
     calibrateStep("Entry Delay", entry_delay, 0, 240);
     calibrateStep("Alarm trigger range", alarm_range, 1, 50);
@@ -808,9 +811,9 @@ void loop() {
   }
 
   // Detection beep / idle sonar tone
-  else if (distance > 0 && distance <= thresholdDistance) {
+  if (distance > 0 && distance <= thresholdDistance) {
     if (millis() - lastBeep > 400) {
-      detectionBeep();
+      if (alarm_on == false) detectionBeep();
       pushDistanceSample((uint8_t)constrain(distance, 0, MAX_DISTANCE));
       lastBeep = millis();
     }
