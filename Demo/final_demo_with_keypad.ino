@@ -854,7 +854,7 @@ void loop() {
   }
 
   // Detection beep / idle sonar tone
-  if (distance > 0 && distance <= thresholdDistance) {
+  if (distance > 0 && distance <= thresholdDistance && !alarm_on) {
     if (millis() - lastBeep > 400) {
       pushDistanceSample((uint8_t)constrain(distance, 0, MAX_DISTANCE));
       if (alarm_on == false) detectionBeep();
@@ -878,7 +878,6 @@ void loop() {
 
   delay(getSweepDelay());
 }
-
 
 
 
