@@ -68,7 +68,7 @@ Servo vServo;
 uint8_t angleTrail[TRAIL_LENGTH];
 
 // ---------- Graph / B-scan ----------
-#define GRAPH_SAMPLES 128   // width of OLED
+#define GRAPH_SAMPLES 64 // width of OLED
 uint8_t distanceHistory[GRAPH_SAMPLES];
 
 
@@ -122,6 +122,8 @@ uint8_t vStep = 10;
 int speedDelay = 20;
 
 unsigned long lastBeep;
+unsigned long last_alarm_tone;
+
 unsigned long alarm_start_time;
 unsigned long lastDisplayUpdate = 0;
 
@@ -342,7 +344,7 @@ void calibrateStep(const char* label, int &value, int minVal, int maxVal) {
     display.clearDisplay();
     display.setCursor(0, 0);
     display.println(label);
-    display.println(F("Move joystick"));
+    display.println(F("Move joystick or use keypad"));
     display.println(F("Press to confirm"));
     display.setCursor(0, 40);
     display.print(F("Value: "));
@@ -384,6 +386,48 @@ void calibrateSpeed() {
       hapticFeedback();
       speedDelay = current;
       delay(300);
+      break;
+    }
+
+    delay(50);
+  }
+}
+
+void calibrateCode() {
+
+  input[0] = '\0';
+  counter = 0;
+
+  while(true){
+
+   char keypad_input = check_keys();
+
+    if (keypad_input >= '0' && keypad_input <= '9' && counter < 4) {
+    input[counter++] = keypad_input;
+    input[counter] = '\0';
+    }
+
+    display.clearDisplay();
+    display.setCursor(0, 0);
+    display.println(F("Enter 4-digit Code"));
+    display.println(F("Press to confirm"));
+    display.setCursor(0, 40);
+    display.println(F("# to reset"));
+    display.println(input);
+    display.display();
+
+    if(keypad_input == '#') {
+      input[0] = '\0';
+      counter = 0;
+    }
+
+    if (counter >= 4 && digitalRead(TOUCH_PIN) == HIGH) {
+      strcpy(code,input);
+      input[0] = '\0';
+      counter = 0;
+      hapticFeedback();
+      delay(300);
+
       break;
     }
 
@@ -615,7 +659,7 @@ void detectionBeep() {
 }
 
 void alarm_sound() {
-  if(millis() - lastBeep> 400){
+  if(millis() - last_alarm_tone> 400){
     static bool alarmPhase = false;
 
     if (alarmPhase) {
@@ -624,7 +668,7 @@ void alarm_sound() {
       tone(SPEAKER_PIN, 900);
     }
     alarmPhase = !alarmPhase;
-    lastBeep = millis();
+    last_alarm_tone = millis();
   }
 }
 
@@ -690,8 +734,7 @@ void setup() {
   alarm_range = floor(thresholdDistance/4); // sets the default value of alarm_range to 0.25*threshold distance that was just set
   calibrateStep("Arm Alarm", alarm_armed, 0, 1);
   if (alarm_armed) {
-
-
+    calibrateCode();
     calibrateStep("Entry Delay", entry_delay, 0, 240);
     calibrateStep("Alarm trigger range", alarm_range, 1, 50);
   }
@@ -813,8 +856,8 @@ void loop() {
   // Detection beep / idle sonar tone
   if (distance > 0 && distance <= thresholdDistance) {
     if (millis() - lastBeep > 400) {
-      if (alarm_on == false) detectionBeep();
       pushDistanceSample((uint8_t)constrain(distance, 0, MAX_DISTANCE));
+      if (alarm_on == false) detectionBeep();
       lastBeep = millis();
     }
   }
@@ -835,5 +878,7 @@ void loop() {
 
   delay(getSweepDelay());
 }
+
+
 
 
